@@ -1,0 +1,11 @@
+# Mac
+.DS_Store
+
+# Target folder
+target
+
+# IDE
+.classpath
+.project
+.settings
+.idea

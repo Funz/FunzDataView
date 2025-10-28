@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Project        : FunzDataView
+  ~ Website        : https://github.com/Funz/FunzDataView
+  ~ Copyright      : © ASNR
+  ~                  31 Avenue de la Division Leclerc
+  ~                  92260 Fontenay-aux-Roses, France
+  ~                  https://www.asnr.fr
+  ~ Licence        : cf. LICENSE
+  ~ Developed By   : Artenum SARL
+  ~ Authors        : Arnaud Trouche
+  ~                  Nicolas Chabalier
+  ~                  Julien Forest
+  ~ Contract       : contract N°50000976 - order N°34007261
+  -->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ContextMenu?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.web.WebView?>
+
+<SplitPane xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1"
+	dividerPositions="0.05" fx:id="splitPane">
+
+		<VBox>
+
+			<ToolBar>
+				<Button onAction="#expandButtonPressed">
+					<graphic>
+						<ImageView pickOnBounds="true" preserveRatio="true">
+							<Image url="%EXPAND_16" />
+						</ImageView>
+					</graphic>
+					<tooltip>
+						<Tooltip text="%EXPAND_TOOLTIP" />
+					</tooltip>
+				</Button>
+				<Button onAction="#collapseButtonPressed">
+					<graphic>
+						<ImageView pickOnBounds="true" preserveRatio="true">
+							<Image url="%COLLAPSE_16" />
+						</ImageView>
+					</graphic>
+					<tooltip>
+						<Tooltip text="%COLLAPSE_TOOLTIP" />
+					</tooltip>
+				</Button>
+				<Region HBox.hgrow="ALWAYS" />
+				<TextField fx:id="filesSearchField" />
+				<Button fx:id="deleteSearchButton" layoutX="32.0" layoutY="10.0" onAction="#deleteSearchPressed">
+					<graphic>
+						<ImageView pickOnBounds="true" preserveRatio="true">
+							<Image url="%DELETE_16" />
+						</ImageView>
+					</graphic>
+				</Button>
+			</ToolBar>
+
+			<TreeView fx:id="filesTree" showRoot="false" VBox.vgrow="ALWAYS">
+				<contextMenu>
+					<ContextMenu fx:id="filesTreeContextMenu">
+						<items>
+							<MenuItem mnemonicParsing="false" onAction="#openFileInSystem" text="%OPEN_IN_SYSTEM" />
+							<MenuItem fx:id="openDiffViewer" mnemonicParsing="false" onAction="#openDiffViewer"
+								text="%COMPARE_FILES" />
+						</items>
+					</ContextMenu>
+				</contextMenu>
+			</TreeView>
+
+			<HBox styleClass="reverse-tool-bar">
+					<Region HBox.hgrow="ALWAYS" />
+					<Button onAction="#updateNowButtonPressed" text="%UPDATE_NOW">
+						<padding>
+							<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+						</padding>
+					</Button>
+					<CheckBox fx:id="alwaysUpdateCheckbox" maxWidth="150.0" minWidth="150.0" prefWidth="150.0"
+						text="%ALWAYS_UPDATE">
+						<padding>
+							<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+						</padding>
+					</CheckBox>
+					<Region layoutX="10.0" layoutY="10.0" />
+			</HBox>
+
+		</VBox>
+
+		<VBox fx:id="rightSide">
+
+			<ToolBar fx:id="editorSearchContainer" />
+
+			<StackPane fx:id="editorContainer" VBox.vgrow="ALWAYS">
+				<WebView fx:id="webview" minHeight="-Infinity" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0"
+						StackPane.alignment="CENTER" />
+			</StackPane>
+
+		</VBox>
+</SplitPane>

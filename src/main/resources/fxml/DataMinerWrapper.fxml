@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Project        : FunzDataView
+  ~ Website        : https://github.com/Funz/FunzDataView
+  ~ Copyright      : © ASNR
+  ~                  31 Avenue de la Division Leclerc
+  ~                  92260 Fontenay-aux-Roses, France
+  ~                  https://www.asnr.fr
+  ~ Licence        : cf. LICENSE
+  ~ Developed By   : Artenum SARL
+  ~ Authors        : Arnaud Trouche
+  ~                  Nicolas Chabalier
+  ~                  Julien Forest
+  ~ Contract       : contract N°50000976 - order N°34007261
+  -->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
+
+<GridPane xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" hgap="5.0" vgap="5.0">
+	<columnConstraints>
+		<ColumnConstraints halignment="RIGHT" hgrow="ALWAYS" percentWidth="50" />
+		<ColumnConstraints halignment="LEFT" hgrow="ALWAYS" percentWidth="50" />
+	</columnConstraints>
+	<rowConstraints>
+		<RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS" />
+		<RowConstraints minHeight="10.0" vgrow="NEVER" />
+	</rowConstraints>
+	<children>
+		<StackPane fx:id="rendererContainer" GridPane.columnSpan="2" GridPane.hgrow="ALWAYS" />
+		<Button onAction="#updateNowButtonPressed" text="%UPDATE_NOW" GridPane.rowIndex="1">
+			<padding>
+				<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+			</padding>
+			<GridPane.margin>
+				<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+			</GridPane.margin>
+		</Button>
+		<CheckBox fx:id="alwaysUpdateCheckbox" maxWidth="150.0" minWidth="150.0" prefWidth="150.0"
+			text="%ALWAYS_UPDATE" GridPane.columnIndex="1" GridPane.rowIndex="1">
+			<padding>
+				<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+			</padding>
+			<GridPane.margin>
+				<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+			</GridPane.margin>
+		</CheckBox>
+	</children>
+</GridPane>

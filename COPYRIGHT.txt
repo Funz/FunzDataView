@@ -1,0 +1,4 @@
+DISCLAIMER
+
+This repository contains sources of FunzDataView project from ASNR. It should not be accessible without ASNR authorization.
+ASNR - All rights reserved

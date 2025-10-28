@@ -1,0 +1,102 @@
+<!--
+  ~ Project        : FunzDataView
+  ~ Website        : https://github.com/Funz/FunzDataView
+  ~ Copyright      : © ASNR
+  ~                  31 Avenue de la Division Leclerc
+  ~                  92260 Fontenay-aux-Roses, France
+  ~                  https://www.asnr.fr
+  ~ Licence        : cf. LICENSE
+  ~ Developed By   : Artenum SARL
+  ~ Authors        : Arnaud Trouche
+  ~                  Nicolas Chabalier
+  ~                  Julien Forest
+  ~ Contract       : contract N°50000976 - order N°34007261
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<!-- =========================================================== -->
+	<!-- POM relationships -->
+	<!-- =========================================================== -->
+
+	<!-- Maven coordinates -->
+	<groupId>org.asnr</groupId>
+	<artifactId>funz-data-view</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+
+	<!-- POM inheritence -->
+	<parent>
+        <groupId>org.keridwen.pom</groupId>
+        <artifactId>org-keridwen-pom</artifactId>
+        <version>3.0.0</version>
+    </parent>
+
+	<!-- Properties -->
+	<properties>
+		<java.version>21</java.version>
+		<funz.version>1.16</funz.version>
+	</properties>
+
+	<!-- Dependencies -->
+	<dependencies>
+
+        <!-- Funz Dependencies -->
+		<dependency>
+            <groupId>org.irsn.funz</groupId>
+            <artifactId>funz-core</artifactId>
+	        <version>${funz.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.irsn.funz</groupId>
+            <artifactId>funz-client</artifactId>
+	        <version>${funz.version}</version>
+        </dependency>
+
+		<!-- Text editor -->
+		<dependency>
+			<groupId>org.keridwen.modelling</groupId>
+			<artifactId>org-keridwen-modelling-super-text-editor</artifactId>
+			<version>5.0.1-SNAPSHOT</version>
+		</dependency>
+
+		<!-- Excel export dependency -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.2.3</version>
+		</dependency>
+
+	</dependencies>
+
+	<!-- =========================================================== -->
+	<!-- General project information -->
+	<!-- =========================================================== -->
+
+	<!-- General project information -->
+	<name>FunzDataView</name>
+	<description>
+      Panel to display Funz results.
+    </description>
+
+	<!-- =========================================================== -->
+	<!-- Build settings -->
+	<!-- =========================================================== -->
+
+	<!-- Packaging -->
+	<packaging>jar</packaging>
+
+	<!-- Artifacts repositories -->
+	<repositories>
+		<repository>
+			<id>Maven Central</id>
+			<url>https://repo1.maven.org/maven2/</url>
+		</repository>
+		<repository>
+			<id>Artenum</id>
+			<url>https://maven.artenum.com/repository/public</url>
+		</repository>
+    </repositories>
+
+</project>
