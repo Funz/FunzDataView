@@ -82,6 +82,8 @@ public enum ResultsDictionary implements GuiDictionary {
     OUTPUT_FUNCTION_STATUS_INVALID_OUTPUT_FUNCTION("Invalid output function %s: %s not set"),
     OUTPUT_FUNCTION_STATUS_NO_OUTPUT_FUNCTION_SELECTED("No output function selected"),
     PARSING_RESULTS("Parsing results..."),
+    @FXML
+    PLEASE_OPEN_PROJECT("Please, open a project to visualise its results"),
     RIGHT_16("icons/16/right.png"),
     SEARCH_BAR_NEXT_TOOLTIP("Previous occurrence"),
     SEARCH_BAR_PREVIOUS_TOOLTIP("Next occurrence"),

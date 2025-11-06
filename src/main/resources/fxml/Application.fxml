@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Project        : FunzDataView
+  ~ Website        : https://github.com/Funz/FunzDataView
+  ~ Copyright      : © ASNR
+  ~                  31 Avenue de la Division Leclerc
+  ~                  92260 Fontenay-aux-Roses, France
+  ~                  https://www.asnr.fr
+  ~ Licence        : cf. LICENSE
+  ~ Developed By   : Artenum SARL
+  ~ Authors        : Arnaud Trouche
+  ~                  Nicolas Chabalier
+  ~                  Julien Forest
+  ~ Contract       : contract N°50000976 - order N°34007261
+  -->
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+
+	<ToolBar>
+		<SplitMenuButton fx:id="openButton" onAction="#showFileChooser">
+			<graphic>
+				<FontIcon iconLiteral="mdral-folder_open" iconSize="24" />
+			</graphic>
+		</SplitMenuButton>
+	</ToolBar>
+
+	<BorderPane fx:id="pane" >
+
+		<Label text="%PLEASE_OPEN_PROJECT" />
+
+	</BorderPane>
+
+</VBox>
