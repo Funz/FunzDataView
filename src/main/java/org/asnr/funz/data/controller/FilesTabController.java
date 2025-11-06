@@ -24,9 +24,9 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
-
 import javax.swing.SwingUtilities;
-
+import javafx.scene.Node;
+import javafx.scene.control.*;
 import org.asnr.funz.data.i18n.ResultsDictionary;
 import org.asnr.funz.data.view.HtmlFileViewer;
 import org.asnr.funz.data.view.HtmlVariablesUtils;
@@ -54,18 +54,6 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Label;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.TextField;
-import javafx.scene.control.ToolBar;
-import javafx.scene.control.TreeCell;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeView;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -174,7 +162,7 @@ final class FilesTabController implements Initializable {
 
         this.editorSearchContainer.getItems().add(new SearchBar(this.editor));
         this.editorContainer.getChildren().clear();
-        this.editorContainer.getChildren().add(this.editor.getView());
+        this.addNodeSafely(this.editor.getView());
 
         this.fillTree();
         this.open(null);
@@ -370,6 +358,17 @@ final class FilesTabController implements Initializable {
         return null;
     }
 
+
+    /**
+     * Add a node to the editor container if not already present.
+     * @param node the node to add
+     */
+    void addNodeSafely(Node node) {
+        if (!editorContainer.getChildren().contains(node)) {
+            editorContainer.getChildren().add(node);
+        }
+    }
+
     void open(final File file) {
         this.editorContainer.getChildren().clear();
         this.rightSide.getChildren().remove(this.editorSearchContainer);
@@ -377,11 +376,11 @@ final class FilesTabController implements Initializable {
         final String extension = file == null ? "" : file.getName().substring(file.getName().indexOf('.') + 1);
         if (file == null || file.isDirectory()) {
             // We don't have a file
-            this.editorContainer.getChildren().add(new Label(ResultsDictionary.SELECT_FILE.getString()));
+            this.addNodeSafely(new Label(ResultsDictionary.SELECT_FILE.getString()));
 
         } else if (file.length() == 0L) {
             // We cannot read the file
-            this.editorContainer.getChildren().add(new Label(ResultsDictionary.EMPTY_FILE.getString()));
+            this.addNodeSafely(new Label(ResultsDictionary.EMPTY_FILE.getString()));
 
         } else if (this.extensionsToFileViewer.containsKey(extension)) {
 
@@ -402,7 +401,7 @@ final class FilesTabController implements Initializable {
             new Thread(task).start();
         } else if (Disk.isBinary(file)) {
             // We cannot read the file
-            this.editorContainer.getChildren().add(new Label(ResultsDictionary.BINARY_FILE.getString()));
+            this.addNodeSafely(new Label(ResultsDictionary.BINARY_FILE.getString()));
 
         } else {
 
