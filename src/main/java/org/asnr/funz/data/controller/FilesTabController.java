@@ -25,6 +25,8 @@ import java.util.ResourceBundle;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
+import javax.swing.SwingUtilities;
+
 import org.asnr.funz.data.i18n.ResultsDictionary;
 import org.asnr.funz.data.view.HtmlFileViewer;
 import org.asnr.funz.data.view.HtmlVariablesUtils;
@@ -193,11 +195,13 @@ final class FilesTabController implements Initializable {
     private void openFileInSystem() {
         final File file = this.filesTree.getSelectionModel().getSelectedItem().getValue();
         if (file != null) {
-            try {
-                Desktop.getDesktop().open(file);
-            } catch (final IOException e) {
-                FilesTabController.log.error(e.toString(), e);
-            }
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    Desktop.getDesktop().open(file);
+                } catch (final IOException e) {
+                    FilesTabController.log.error(e.toString(), e);
+                }
+            });
         }
     }
 
