@@ -394,8 +394,7 @@ final class FilesTabController implements Initializable {
 
                 @Override
                 protected void succeeded() {
-                    Platform.runLater(() -> FilesTabController.this.editorContainer.getChildren()
-                            .add(FilesTabController.this.webview));
+                    Platform.runLater(() -> addNodeSafely(FilesTabController.this.webview));
                 }
             };
             new Thread(task).start();
@@ -415,10 +414,11 @@ final class FilesTabController implements Initializable {
                 @Override
                 protected void succeeded() {
                     Platform.runLater(() -> {
-                        FilesTabController.this.editorContainer.getChildren()
-                                .add(FilesTabController.this.editor.getView());
-                        FilesTabController.this.rightSide.getChildren()
-                                .add(0, FilesTabController.this.editorSearchContainer);
+                        addNodeSafely(FilesTabController.this.editor.getView());
+                        if (!rightSide.getChildren().contains(FilesTabController.this.editorSearchContainer)) {
+                            FilesTabController.this.rightSide.getChildren()
+                                    .addFirst(FilesTabController.this.editorSearchContainer);
+                        }
                     });
                 }
             };
