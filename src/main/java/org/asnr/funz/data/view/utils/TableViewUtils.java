@@ -52,7 +52,7 @@ public final class TableViewUtils {
         table.getColumns().forEach(c -> c.prefWidthProperty().unbind());
 
         // Bind size
-        table.getColumns().stream()
+        table.getColumns()
                 .forEach(c -> c.prefWidthProperty().bind(table.widthProperty().subtract(20).divide(nbCols)));
 
     }
@@ -61,11 +61,13 @@ public final class TableViewUtils {
         // Suppress default constructor for noninstantiability.
         throw new AssertionError();
     }
-
+    
     public static Comparator<DiscreteCaseResults> createDiscretCaseResultsColumnComparator(final String name) {
         return (o1, o2) -> {
             final Object r1 = o1.getResult(name);
             final Object r2 = o2.getResult(name);
+
+            // Null handling
             if (r1 == null || r2 == null) {
                 if (r1 != null) {
                     return 1;
@@ -75,15 +77,32 @@ public final class TableViewUtils {
                     return 0;
                 }
             }
-            if (r1 instanceof final Comparable comparable) {
-                return comparable.compareTo(r2);
-            } else {
-                if (r1 instanceof final double[] array1 && r2 instanceof final double[] array2 && array1.length > 0
-                        && array2.length > 0) {
+
+            // Both numbers \-\> compare as doubles
+            switch (r1) {
+                case Number n1 when r2 instanceof Number n2 -> {
+                    return Double.compare(n1.doubleValue(), n2.doubleValue());
+                }
+
+
+                // Same class and Comparable \-\> use natural ordering
+                case Comparable<?> c1 when r1.getClass().equals(r2.getClass()) -> {
+                    @SuppressWarnings("unchecked") final Comparable<Object> cmp1 = (Comparable<Object>) c1;
+                    return cmp1.compareTo(r2);
+                }
+
+
+                // Handle double[] specially
+                case double[] array1 when r2 instanceof double[] array2 && array1.length > 0 && array2.length > 0 -> {
                     return Double.compare(array1[0], array2[0]);
                 }
-                return r1.toString().compareTo(r2.toString());
+                default -> {
+                    // Do nothing, fallback to toString comparison
+                }
             }
+
+            // Fallback: compare string representations
+            return r1.toString().compareTo(r2.toString());
         };
     }
 
@@ -92,9 +111,9 @@ public final class TableViewUtils {
 
             if (s1 == null && s2 == null) {
                 return 0;
-            } else if (s1 != null) {
+            } else if (s1 == null) {
                 return 1;
-            } else if (s2 != null) {
+            } else if (s2 == null) {
                 return -1;
             }
 
