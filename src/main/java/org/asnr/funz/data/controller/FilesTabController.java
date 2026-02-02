@@ -22,11 +22,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ResourceBundle;
-import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
+
 import javax.swing.SwingUtilities;
-import javafx.scene.Node;
-import javafx.scene.control.*;
+
 import org.asnr.funz.data.i18n.ResultsDictionary;
 import org.asnr.funz.data.view.HtmlFileViewer;
 import org.asnr.funz.data.view.HtmlVariablesUtils;
@@ -52,8 +51,21 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.TextField;
+import javafx.scene.control.ToolBar;
+import javafx.scene.control.TreeCell;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -201,30 +213,28 @@ final class FilesTabController implements Initializable {
         final ObservableList<TreeItem<File>> files = this.filesTree.getSelectionModel().getSelectedItems();
 
         if (files.size() == 2) {
-            final DiffTextEditor diffTextEditor = TextEditorFactory.getDiffTextEditor();
+            Thread.ofVirtual().start(() -> {
 
-            final Stage stage = new Stage();
-            stage.setTitle(ResultsDictionary.DIFFERENTIAL_VIEW.getString());
-            final double width = 950;
-            final double height = 680;
-            stage.setScene(new Scene(diffTextEditor.getView(), width, height));
-            stage.initOwner(FxHelper.getWindow(this.filesTree));
-            stage.show();
-
-            final File file1 = files.get(0).getValue();
-            final File file2 = files.get(1).getValue();
-            Executors.defaultThreadFactory().newThread(() -> {
-                try {
-                    Thread.sleep(100);
-                } catch (final InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+                final DiffTextEditor diffTextEditor = TextEditorFactory.getDiffTextEditor();
 
                 Platform.runLater(() -> {
+                    final Stage stage = new Stage();
+                    stage.setTitle(ResultsDictionary.DIFFERENTIAL_VIEW.getString());
+                    final double width = 950;
+                    final double height = 680;
+                    stage.setScene(new Scene(diffTextEditor.getView(), width, height));
+                    stage.initOwner(FxHelper.getWindow(this.filesTree));
+                    stage.setWidth(width);
+                    stage.setHeight(height);
+                    stage.show();
+
+                    final File file1 = files.get(0).getValue();
+                    final File file2 = files.get(1).getValue();
+
                     diffTextEditor.setDisable(true);
                     diffTextEditor.openFiles(file1, file2);
                 });
-            }).start();
+            });
         }
     }
 
@@ -358,14 +368,15 @@ final class FilesTabController implements Initializable {
         return null;
     }
 
-
     /**
      * Add a node to the editor container if not already present.
-     * @param node the node to add
+     *
+     * @param node
+     *         the node to add
      */
-    void addNodeSafely(Node node) {
-        if (!editorContainer.getChildren().contains(node)) {
-            editorContainer.getChildren().add(node);
+    void addNodeSafely(final Node node) {
+        if (!this.editorContainer.getChildren().contains(node)) {
+            this.editorContainer.getChildren().add(node);
         }
     }
 
@@ -394,7 +405,7 @@ final class FilesTabController implements Initializable {
 
                 @Override
                 protected void succeeded() {
-                    Platform.runLater(() -> addNodeSafely(FilesTabController.this.webview));
+                    Platform.runLater(() -> FilesTabController.this.addNodeSafely(FilesTabController.this.webview));
                 }
             };
             new Thread(task).start();
@@ -414,8 +425,9 @@ final class FilesTabController implements Initializable {
                 @Override
                 protected void succeeded() {
                     Platform.runLater(() -> {
-                        addNodeSafely(FilesTabController.this.editor.getView());
-                        if (!rightSide.getChildren().contains(FilesTabController.this.editorSearchContainer)) {
+                        FilesTabController.this.addNodeSafely(FilesTabController.this.editor.getView());
+                        if (!FilesTabController.this.rightSide.getChildren()
+                                .contains(FilesTabController.this.editorSearchContainer)) {
                             FilesTabController.this.rightSide.getChildren()
                                     .addFirst(FilesTabController.this.editorSearchContainer);
                         }
