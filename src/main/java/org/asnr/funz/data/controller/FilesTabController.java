@@ -231,7 +231,7 @@ final class FilesTabController implements Initializable {
                     final File file1 = files.get(0).getValue();
                     final File file2 = files.get(1).getValue();
 
-                    diffTextEditor.setDisable(true);
+                    diffTextEditor.setDisable(true, true);
                     diffTextEditor.openFiles(file1, file2);
                 });
             });
