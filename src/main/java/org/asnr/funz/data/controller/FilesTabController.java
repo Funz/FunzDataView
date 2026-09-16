@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
 import javax.swing.SwingUtilities;
 
 import org.asnr.funz.data.i18n.ResultsDictionary;
+import org.asnr.funz.data.view.AceEditorTheme;
 import org.asnr.funz.data.view.HtmlFileViewer;
 import org.asnr.funz.data.view.HtmlVariablesUtils;
 import org.asnr.funz.data.view.common.SearchBar;
@@ -175,9 +176,75 @@ final class FilesTabController implements Initializable {
         this.editorSearchContainer.getItems().add(new SearchBar(this.editor));
         this.editorContainer.getChildren().clear();
         this.addNodeSafely(this.editor.getView());
+        this.applyAceTheme();
 
         this.fillTree();
         this.open(null);
+    }
+
+    /**
+     * ace.js is rendered inside a {@code WebView} and is not styled by the host application's own Swing/JavaFX
+     * theme, so its background/text colors are forced independently, driven by {@link AceEditorTheme}.
+     */
+    private void applyAceTheme() {
+        final Parent view = this.editor.getView();
+        if (!(view instanceof StackPane)) {
+            return;
+        }
+        for (final Node child : ((StackPane) view).getChildren()) {
+            if (child instanceof WebView) {
+                FilesTabController.forceAceTheme((WebView) child);
+            }
+        }
+    }
+
+    private static void forceAceTheme(final WebView webView) {
+        final AceEditorTheme.Mode mode = AceEditorTheme.getMode();
+        final String aceTheme = mode == AceEditorTheme.Mode.LIGHT ? "textmate" : "monokai";
+        final String background;
+        final String foreground;
+        switch (mode) {
+        case HIGH_CONTRAST -> {
+            background = "#000000";
+            foreground = "#ffffff";
+        }
+        case DARK -> {
+            background = "#272822";
+            foreground = "#f8f8f2";
+        }
+        default -> {
+            background = "#ffffff";
+            foreground = "#000000";
+        }
+        }
+        // CSS overrides (stylesheet, injected <style> tag) do not reliably win against ace's own theme styling,
+        // so colors are forced as inline styles instead. A MutationObserver repaints lines lazily created by
+        // ace's virtualized rendering while scrolling. This paints over all per-token syntax-highlight colors.
+        final String script = "(function(){"
+                + "try{editor.setTheme('ace/theme/" + aceTheme + "');}catch(e){}"
+                + "var FG='" + foreground + "';var BG='" + background + "';"
+                + "function paint(root){"
+                + "  if(!root)return;"
+                + "  document.body.style.setProperty('background-color',BG,'important');"
+                + "  var scroller=document.querySelector('.ace_scroller');"
+                + "  if(scroller)scroller.style.setProperty('background-color',BG,'important');"
+                + "  var content=document.querySelector('.ace_content');"
+                + "  if(content)content.style.setProperty('background-color',BG,'important');"
+                + "  var els=root.querySelectorAll('.ace_line, .ace_line *');"
+                + "  for(var i=0;i<els.length;i++){els[i].style.setProperty('color',FG,'important');}"
+                + "}"
+                + "var textLayer=document.querySelector('.ace_text-layer');"
+                + "paint(textLayer||document);"
+                + "if(textLayer&&!textLayer.__funzObserved){"
+                + "  textLayer.__funzObserved=true;"
+                + "  new MutationObserver(function(){paint(textLayer);}).observe(textLayer,{childList:true,subtree:true});"
+                + "}"
+                + "})();";
+        try {
+            webView.getEngine().executeScript(script);
+        } catch (final Exception e) {
+            FilesTabController.log.warn("Unable to force the ace editor theme: {}", e.getMessage(), e);
+        }
     }
 
     public TreeView<File> getFileTreeView() {
@@ -426,6 +493,7 @@ final class FilesTabController implements Initializable {
                 protected void succeeded() {
                     Platform.runLater(() -> {
                         FilesTabController.this.addNodeSafely(FilesTabController.this.editor.getView());
+                        FilesTabController.this.applyAceTheme();
                         if (!FilesTabController.this.rightSide.getChildren()
                                 .contains(FilesTabController.this.editorSearchContainer)) {
                             FilesTabController.this.rightSide.getChildren()

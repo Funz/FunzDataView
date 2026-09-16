@@ -135,6 +135,7 @@ public final class HtmlVariablesUtils {
         CONTENT("$$CONTENT$$"),
         BASE("__BASE__"),
         DIR("$$DIR$$"),
+        DARK_MODE("$$DARK$$"),
         FILENAME("$$FILENAME$$"),
         LIB("$$LIB$$"),
         NAME("$$NAME$$"),

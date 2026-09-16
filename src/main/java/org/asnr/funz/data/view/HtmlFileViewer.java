@@ -76,6 +76,8 @@ public class HtmlFileViewer {
         // Setup variable replacement
         this.substitutions = new EnumMap<>(HtmlVariablesUtils.Variable.class);
         this.substitutions.put(HtmlVariablesUtils.Variable.PATH, this.templateFile.getParentFile()::getAbsolutePath);
+        this.substitutions.put(HtmlVariablesUtils.Variable.DARK_MODE,
+                () -> String.valueOf(AceEditorTheme.isDark()));
 
         // Extract extensions
         if (!"".equals(this.templateContent)) {
