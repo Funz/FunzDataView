@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -158,7 +157,7 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
         final Group visibilityGroup = new Group(toolbar);
 
         this.valuesTable = new TableView<>();
-        this.valuesTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+        this.valuesTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         this.valuesTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
         // Copy to clipboard selected rows with a menu
@@ -421,14 +420,13 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
         // Remove all columns
         this.valuesTable.getColumns().clear();
 
-        // Add visible columns
-        for (final TableColumn<CaseResults, ?> column : this.allColumns) {
-            final boolean visible = Optional.ofNullable(map.get(column.getText())) //
-                    .map(BooleanProperty::get) //
-                    .orElse(false);
-            if (visible) {
-                // Re-add the column
-                this.addColumn(column);
+        // Add visible columns in the requested order.
+        for (final ColumnVisibility visibility : visibilities) {
+            if (visibility.visible().get()) {
+                this.allColumns.stream() //
+                        .filter(column -> column.getText().equals(visibility.name())) //
+                        .findFirst() //
+                    .ifPresent(this.valuesTable.getColumns()::add);
             }
         }
 

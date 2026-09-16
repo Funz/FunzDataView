@@ -25,6 +25,7 @@ import com.artenum.tk.ui.util.OsgiFxmlLoader;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
@@ -52,10 +53,14 @@ final class DataMinerWrapperController extends AbstractDynamicUpdateController i
      */
     private final Label placeHolder;
 
+    private boolean updateControlsVisible = true;
+
     @FXML
     private StackPane rendererContainer;
     @FXML
     private CheckBox alwaysUpdateCheckbox;
+    @FXML
+    private Button updateNowButton;
 
     /**
      * Creates a new {@link DataMinerWrapperController} that controls and interacts with the given {@link DataMiner}.
@@ -81,6 +86,7 @@ final class DataMinerWrapperController extends AbstractDynamicUpdateController i
 
     @Override
     public void initialize(final URL location, final ResourceBundle resources) {
+        this.applyUpdateControlsVisibility();
         this.refresh(false);
     }
 
@@ -96,6 +102,20 @@ final class DataMinerWrapperController extends AbstractDynamicUpdateController i
      */
     Tab getTab() {
         return this.view;
+    }
+
+    void setUpdateControlsVisible(final boolean visible) {
+        this.updateControlsVisible = visible;
+        this.applyUpdateControlsVisibility();
+    }
+
+    private void applyUpdateControlsVisibility() {
+        if (this.updateNowButton != null) {
+            this.updateNowButton.setManaged(this.updateControlsVisible);
+            this.updateNowButton.setVisible(this.updateControlsVisible);
+            this.alwaysUpdateCheckbox.setManaged(this.updateControlsVisible);
+            this.alwaysUpdateCheckbox.setVisible(this.updateControlsVisible);
+        }
     }
 
     /**

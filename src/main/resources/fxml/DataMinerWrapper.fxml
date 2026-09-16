@@ -34,7 +34,7 @@
 	</rowConstraints>
 	<children>
 		<StackPane fx:id="rendererContainer" GridPane.columnSpan="2" GridPane.hgrow="ALWAYS" />
-		<Button onAction="#updateNowButtonPressed" text="%UPDATE_NOW" GridPane.rowIndex="1">
+		<Button fx:id="updateNowButton" onAction="#updateNowButtonPressed" text="%UPDATE_NOW" GridPane.rowIndex="1">
 			<padding>
 				<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
 			</padding>

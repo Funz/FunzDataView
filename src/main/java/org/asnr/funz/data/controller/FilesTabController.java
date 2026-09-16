@@ -68,6 +68,7 @@ import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
@@ -101,6 +102,8 @@ final class FilesTabController implements Initializable {
      */
     private WebViewSynchronousScriptExecutor webviewLoader;
 
+    private boolean updateControlsVisible = true;
+
     @FXML
     private SplitPane splitPane;
     @FXML
@@ -125,6 +128,8 @@ final class FilesTabController implements Initializable {
 
     @FXML
     private CheckBox alwaysUpdateCheckbox;
+    @FXML
+    private HBox updateControls;
 
     /**
      * Default constructor
@@ -140,6 +145,7 @@ final class FilesTabController implements Initializable {
 
     @Override
     public void initialize(final URL location, final ResourceBundle resources) {
+        this.applyUpdateControlsVisibility();
         this.project.addStatusListener((modifiedProject, newStatus) -> {
             switch (newStatus) {
             case INITIAL, RUNNING -> Platform.runLater(this::clearTree);
@@ -180,6 +186,18 @@ final class FilesTabController implements Initializable {
 
         this.fillTree();
         this.open(null);
+    }
+
+    void setUpdateControlsVisible(final boolean visible) {
+        this.updateControlsVisible = visible;
+        this.applyUpdateControlsVisibility();
+    }
+
+    private void applyUpdateControlsVisibility() {
+        if (this.updateControls != null) {
+            this.updateControls.setManaged(this.updateControlsVisible);
+            this.updateControls.setVisible(this.updateControlsVisible);
+        }
     }
 
     /**

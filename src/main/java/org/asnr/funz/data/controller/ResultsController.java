@@ -143,6 +143,18 @@ public final class ResultsController implements Initializable {
         this.filesController.setEditorDisable(disable);
     }
 
+    /**
+     * Shows or hides the manual update button and live update checkbox in every results tab.
+     *
+     * @param visible
+     *         whether the update controls should be displayed
+     */
+    public void setUpdateControlsVisible(final boolean visible) {
+        this.filesController.setUpdateControlsVisible(visible);
+        this.viewsController.setUpdateControlsVisible(visible);
+        this.doeController.setUpdateControlsVisible(visible);
+    }
+
     public void selectTableTab() {
         final SingleSelectionModel<Tab> selectionModel = this.tabs.getSelectionModel();
         selectionModel.select(this.dataTab);

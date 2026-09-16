@@ -148,6 +148,10 @@ abstract class AbstractDataMinerController extends AbstractDynamicUpdateControll
         return this.tabs;
     }
 
+    void setUpdateControlsVisible(final boolean visible) {
+        this.dataMinerWrappers.forEach(wrapper -> wrapper.setUpdateControlsVisible(visible));
+    }
+
     @Override
     void setShowing(final boolean isShowing) {
         if (isShowing) {

@@ -18,6 +18,8 @@ import java.util.Comparator;
 
 import org.asnr.funz.data.model.DiscreteCaseResults;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 
@@ -40,20 +42,41 @@ public final class TableViewUtils {
     }
 
     /**
+     * Sizes visible columns equally when the table is first laid out, so users can resize them independently
+     * afterwards.
+     *
      * @param <T>
      *         the type of data in the table
      * @param table
-     *         the TableView to resize
+     *         the TableView to update
      */
     public static <T> void autoResizeColumns(final TableView<T> table) {
-        final long nbCols = TableViewUtils.getVisibleColumns(table);
-
-        // First unbind
         table.getColumns().forEach(c -> c.prefWidthProperty().unbind());
+        final long numberOfColumns = TableViewUtils.getVisibleColumns(table);
+        if (numberOfColumns == 0) {
+            return;
+        }
 
-        // Bind size
-        table.getColumns()
-                .forEach(c -> c.prefWidthProperty().bind(table.widthProperty().subtract(20).divide(nbCols)));
+        final ChangeListener<Number> listener = new ChangeListener<>() {
+            @Override
+            public void changed(final ObservableValue<? extends Number> observable, final Number oldWidth,
+                    final Number newWidth) {
+                if (newWidth.doubleValue() > 0) {
+                    TableViewUtils.setEqualColumnWidths(table, newWidth.doubleValue(), numberOfColumns);
+                    observable.removeListener(this);
+                }
+            }
+        };
+        listener.changed(table.widthProperty(), 0, table.getWidth());
+        if (table.getWidth() <= 0) {
+            table.widthProperty().addListener(listener);
+        }
+    }
+
+    private static <T> void setEqualColumnWidths(final TableView<T> table, final double tableWidth,
+            final long numberOfColumns) {
+        final double columnWidth = Math.max(1, (tableWidth - 20) / numberOfColumns);
+        table.getColumns().stream().filter(TableColumn::isVisible).forEach(column -> column.setPrefWidth(columnWidth));
 
     }
 
