@@ -401,22 +401,26 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
     }
 
     public void displayColumnDialog(final Window window) {
-        // Extract column status
-        final List<ColumnVisibility> status = this.allColumns.stream()
-                .map(c -> new ColumnVisibility(c.getText(), this.valuesTable.getColumns().contains(c))).toList();
+        // Keep the current table order for visible columns.
+        final List<ColumnVisibility> status = this.valuesTable.getColumns().stream()
+                .map(column -> new ColumnVisibility(column.getText(), true))
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        // Add hidden columns after the visible ones, using their original order.
+        this.allColumns.stream()
+                .filter(column -> !this.valuesTable.getColumns().contains(column))
+                .map(column -> new ColumnVisibility(column.getText(), false))
+                .forEach(status::add);
 
         // Show dialog
-        final List<ColumnVisibility> result = ColumnVisibilityDialog.show(window, status);
+        final List<ColumnVisibility> result =
+                ColumnVisibilityDialog.show(window, status);
 
-        // Apply if changed
+        // Apply the selected visibility/order.
         this.updateColumns(result);
     }
 
     private void updateColumns(final List<ColumnVisibility> visibilities) {
-        // Extract column name to visibility
-        final Map<String, BooleanProperty> map = visibilities.stream()
-                .collect(Collectors.toMap(ColumnVisibility::name, ColumnVisibility::visible));
-
         // Remove all columns
         this.valuesTable.getColumns().clear();
 

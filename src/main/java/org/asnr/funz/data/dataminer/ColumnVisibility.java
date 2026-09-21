@@ -38,4 +38,12 @@ record ColumnVisibility(String name, BooleanProperty visible) {
         this(name, new SimpleBooleanProperty(visibility));
     }
 
+    /**
+     * Creates a copy with an independent visibility property.
+     *
+     * @return a copy of this column visibility
+     */
+    ColumnVisibility copy() {
+        return new ColumnVisibility(name, visible.get());
+    }
 }

@@ -46,8 +46,13 @@ final class ColumnVisibilityDialog {
      *         the list of column visibilities
      * @return the user selection or the input visibilitis if cancelled
      */
-    static List<ColumnVisibility> show(final Window window, final List<ColumnVisibility> visibilities) {
-        final ColumnVisibilityDialog instance = new ColumnVisibilityDialog(window, visibilities);
+    static List<ColumnVisibility> show(
+            final Window window,
+            final List<ColumnVisibility> visibilities) {
+
+        final ColumnVisibilityDialog instance =
+                new ColumnVisibilityDialog(window, visibilities);
+
         return instance.dialog.showAndWait().orElse(visibilities);
     }
 
@@ -55,24 +60,39 @@ final class ColumnVisibilityDialog {
 
     private final TableView<ColumnVisibility> table;
 
-    private ColumnVisibilityDialog(final Window window, final List<ColumnVisibility> currentVisibility) {
+    private ColumnVisibilityDialog(
+            final Window window,
+            final List<ColumnVisibility> currentVisibility) {
+
+        // Work on copies so Cancel/X cannot modify the original state.
+        final List<ColumnVisibility> workingVisibility = currentVisibility.stream()
+                .map(ColumnVisibility::copy)
+                .toList();
+
         // Select all / Unselect all
         final HBox toolbar = this.createToolbar();
 
         // Table
         this.table = new TableView<>();
         this.table.setEditable(true);
+
         final TableColumn<ColumnVisibility, Boolean> selection = new TableColumn<>();
         selection.setEditable(true);
         selection.setCellValueFactory(cdf -> cdf.getValue().visible());
         selection.setCellFactory(CheckBoxTableCell.forTableColumn(selection));
         selection.setMaxWidth(30);
+
         this.table.getColumns().add(selection);
-        final TableColumn<ColumnVisibility, String> name = new TableColumn<>(ResultsDictionary.NAME.getString());
-        name.setCellValueFactory(cdf -> new SimpleStringProperty(cdf.getValue().name()));
+
+        final TableColumn<ColumnVisibility, String> name =
+                new TableColumn<>(ResultsDictionary.NAME.getString());
+        name.setCellValueFactory(cdf ->
+                new SimpleStringProperty(cdf.getValue().name()));
+
         this.table.getColumns().add(name);
-        this.table.getItems().addAll(currentVisibility);
-        this.table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_LAST_COLUMN);
+        this.table.getItems().addAll(workingVisibility);
+        this.table.setColumnResizePolicy(
+                TableView.CONSTRAINED_RESIZE_POLICY_LAST_COLUMN);
 
         // Dialog
         this.dialog = new Dialog<>();
@@ -80,14 +100,14 @@ final class ColumnVisibilityDialog {
         this.dialog.initOwner(window);
         this.dialog.setTitle(ResultsDictionary.COLUMN_SELECTOR.getString());
 
-        // Buttons && Converter
-        this.dialog.getDialogPane().getButtonTypes().addAll(ButtonType.CANCEL, ButtonType.APPLY);
-        this.dialog.setResultConverter(btn -> {
-            if (btn == ButtonType.APPLY) {
+        this.dialog.getDialogPane().getButtonTypes()
+                .addAll(ButtonType.CANCEL, ButtonType.APPLY);
+
+        this.dialog.setResultConverter(button -> {
+            if (button == ButtonType.APPLY) {
                 return this.table.getItems();
-            } else {
-                return currentVisibility;
             }
+            return null;
         });
 
         this.dialog.getDialogPane().setContent(new VBox(10, toolbar, this.table));
