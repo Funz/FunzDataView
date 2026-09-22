@@ -16,15 +16,14 @@ package org.asnr.funz.data.dataminer;
 
 import java.util.List;
 
+import javafx.application.Platform;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.Region;
 import org.asnr.funz.data.i18n.ResultsDictionary;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Pos;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Dialog;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -99,6 +98,17 @@ final class ColumnVisibilityDialog {
         this.dialog.initModality(Modality.APPLICATION_MODAL);
         this.dialog.initOwner(window);
         this.dialog.setTitle(ResultsDictionary.COLUMN_SELECTOR.getString());
+        this.dialog.setResizable(true);
+
+        // Apply the owner theme to the dialog
+        this.dialog.setOnShown(event -> {
+            final Scene ownerScene = window.getScene();
+            final Scene dialogScene = this.dialog.getDialogPane().getScene();
+
+            if (ownerScene != null) {
+                dialogScene.getStylesheets().setAll(ownerScene.getStylesheets());
+            }
+        });
 
         this.dialog.getDialogPane().getButtonTypes()
                 .addAll(ButtonType.CANCEL, ButtonType.APPLY);
