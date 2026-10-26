@@ -311,11 +311,12 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
 
         Preferences.userRoot().put(AbstractTableDataMiner.EXPORT_VARIABLE_LAST_DIR, file.getParent());
 
-        final List<String> variableNames = new ArrayList<>(this.getVariables());
-        final List<String> outputNames = new ArrayList<>();
-        for (final TableColumn<CaseResults, C> column : this.outputColumns().keySet()) {
-            outputNames.add(column.getText());
-        }
+        // Same ordering as the table display
+        final List<String> variableNames = this.getVariables().stream().sorted().toList();
+        final List<String> outputNames = this.outputColumns().keySet().stream()
+                .map(TableColumn::getText)
+                .sorted(String::compareToIgnoreCase)
+                .toList();
 
         if (extension.equalsIgnoreCase("csv")) {
             // Export as CSV
