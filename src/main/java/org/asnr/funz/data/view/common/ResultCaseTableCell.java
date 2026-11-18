@@ -22,7 +22,6 @@ import org.funz.parameter.Case;
 
 import com.artenum.tk.ui.chart.Sparkline;
 
-import javafx.application.Platform;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.cell.TextFieldTableCell;
 
@@ -53,31 +52,27 @@ public abstract class ResultCaseTableCell<T> extends TextFieldTableCell<T, Discr
     @Override
     public void updateItem(final DiscreteCaseResults result, final boolean empty) {
         super.updateItem(result, empty);
-
-        if (empty || (result == null) || (result.getStringResult(this.outputFunction.get()) == null)) {
+        // the cell is reused for other rows: nothing of the previous one must stay
+        this.setGraphic(null);
+        final String selectedOutputFunction = this.outputFunction.get();
+        final String toShow = (empty || (result == null)) ? null : result.getStringResult(selectedOutputFunction);
+        if (toShow == null) {
             this.setText(null);
-        } else {
-            final String selectedOutputFunction = this.outputFunction.get();
-
-            final String toShow = result.getStringResult(selectedOutputFunction);
-            this.setText(this.computeTextToShow(toShow, this.outputFunction.get()));
-
-            if (result.hasPercentProgress()) {
-                this.progressBar.setProgress(result.getPercentProgress());
-                Platform.runLater(() -> this.setGraphic(this.progressBar));
-            }
-
-            if (result.hasCountProgress()) {
-                this.progressBar.setProgress(result.getCountProgress());
-                Platform.runLater(() -> this.setGraphic(this.progressBar));
-            }
-
-            if (result.hasSparkLine(this.outputFunction.get())) {
-                this.sparkline(result);
-            }
-
-            this.computeAdditionalElements(result);
+            return;
         }
+        this.setText(this.computeTextToShow(toShow, selectedOutputFunction));
+        if (result.hasPercentProgress()) {
+            this.progressBar.setProgress(result.getPercentProgress());
+            this.setGraphic(this.progressBar);
+        }
+        if (result.hasCountProgress()) {
+            this.progressBar.setProgress(result.getCountProgress());
+            this.setGraphic(this.progressBar);
+        }
+        if (result.hasSparkLine(selectedOutputFunction)) {
+            this.sparkline(result);
+        }
+        this.computeAdditionalElements(result);
     }
 
     private void sparkline(final DiscreteCaseResults result) {

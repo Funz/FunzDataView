@@ -14,14 +14,15 @@
  */
 package org.asnr.funz.data.view;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 
-import org.asnr.funz.data.dataminer.TableDataMiner;
 import org.asnr.funz.data.model.CaseResults;
 import org.asnr.funz.data.model.DiscreteCaseResults;
 import org.asnr.funz.data.view.common.ResultCaseTableCell;
+import org.asnr.funz.data.view.utils.TableViewUtils;
 
 /**
  * This table cell display result value, but if the result is not found it will search in other
@@ -31,19 +32,22 @@ import org.asnr.funz.data.view.common.ResultCaseTableCell;
  */
 public class MultipleResultTableCell extends ResultCaseTableCell<CaseResults> {
 
-    private final Collection<DiscreteCaseResults> allResults;
+    private final Function<DiscreteCaseResults, List<DiscreteCaseResults>> similarResults;
     private final Map<String, String> columnsFormat;
 
     /**
      * @param outputFunctionName
      *         name of the output function of the column
-     * @param results
+     * @param similarResults
+     *         the results of the other cases with the same variable values, where a missing value is searched
      * @param columnsFormat
+     *         the formats of the values, by column
      */
-    public MultipleResultTableCell(final String outputFunctionName, final Collection<DiscreteCaseResults> results,
+    public MultipleResultTableCell(final String outputFunctionName,
+            final Function<DiscreteCaseResults, List<DiscreteCaseResults>> similarResults,
             final Map<String, String> columnsFormat) {
         super(() -> outputFunctionName);
-        this.allResults = results;
+        this.similarResults = similarResults;
         this.columnsFormat = columnsFormat;
     }
 
@@ -73,16 +77,21 @@ public class MultipleResultTableCell extends ResultCaseTableCell<CaseResults> {
     @Override
     public void updateItem(final DiscreteCaseResults result, final boolean empty) {
         super.updateItem(result, empty);
-        if (!empty && (this.getText() == null || this.getText().equals("?")) && this.allResults != null) {
-            this.getStyleClass().add("highlighted-table-cell2");
-            for (final DiscreteCaseResults otherResults : TableDataMiner.getSimilarResults(result, this.allResults)) {
-                super.updateItem(otherResults, empty);
-                if (this.getText() != null && !this.getText().contentEquals("?")) {
-                    break;
+        final boolean missing = !empty && (result != null) && MultipleResultTableCell.isMissing(this.getText());
+        TableViewUtils.setStyleClass(this, "highlighted-table-cell2", missing);
+        if (missing) {
+            // the value of another project, with the same variable values
+            for (final DiscreteCaseResults otherResults : this.similarResults.apply(result)) {
+                super.updateItem(otherResults, false);
+                if (!MultipleResultTableCell.isMissing(this.getText())) {
+                    return;
                 }
             }
-        } else {
-            this.getStyleClass().remove("highlighted-table-cell2");
+            super.updateItem(result, false);
         }
+    }
+
+    private static boolean isMissing(final String text) {
+        return (text == null) || text.equals("?");
     }
 }

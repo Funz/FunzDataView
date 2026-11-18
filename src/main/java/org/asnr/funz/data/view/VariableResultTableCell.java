@@ -15,6 +15,7 @@
 package org.asnr.funz.data.view;
 
 import org.asnr.funz.data.model.CaseResults;
+import org.asnr.funz.data.view.utils.TableViewUtils;
 
 import javafx.scene.control.cell.TextFieldTableCell;
 
@@ -31,10 +32,8 @@ public class VariableResultTableCell extends TextFieldTableCell<CaseResults, Str
         if (empty || item == null) {
             this.setText(null);
             this.setGraphic(null);
-            this.getStyleClass().remove("highlighted-table-cell");
-        } else {
-            this.getStyleClass().add("highlighted-table-cell");
         }
+        TableViewUtils.setStyleClass(this, "highlighted-table-cell", !empty && item != null);
 
     }
 

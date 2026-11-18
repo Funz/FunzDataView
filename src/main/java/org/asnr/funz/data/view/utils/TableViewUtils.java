@@ -20,6 +20,7 @@ import org.asnr.funz.data.model.DiscreteCaseResults;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.control.Cell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 
@@ -78,6 +79,24 @@ public final class TableViewUtils {
         final double columnWidth = Math.max(1, (tableWidth - 20) / numberOfColumns);
         table.getColumns().stream().filter(TableColumn::isVisible).forEach(column -> column.setPrefWidth(columnWidth));
 
+    }
+
+    /**
+     * Adds or removes a style class, once: a cell is reused for other rows, so the class must not pile up.
+     *
+     * @param cell
+     *         the cell to style
+     * @param styleClass
+     *         the style class
+     * @param present
+     *         whether the cell has the style class
+     */
+    public static void setStyleClass(final Cell<?> cell, final String styleClass, final boolean present) {
+        if (!present) {
+            cell.getStyleClass().removeAll(styleClass);
+        } else if (!cell.getStyleClass().contains(styleClass)) {
+            cell.getStyleClass().add(styleClass);
+        }
     }
 
     private TableViewUtils() {

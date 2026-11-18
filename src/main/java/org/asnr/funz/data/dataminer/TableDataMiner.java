@@ -19,6 +19,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.asnr.funz.data.model.CaseResults;
 import org.asnr.funz.data.model.DiscreteCaseResults;
@@ -35,6 +38,9 @@ import javafx.scene.control.TableColumn;
  * @author Arnaud TROUCHE - Artenum SARL
  */
 public class TableDataMiner extends AbstractTableDataMiner<DiscreteCaseResults, DiscreteCaseResults> {
+
+    /** The results of the other cases with the same variable values, by case. */
+    private final Map<DiscreteCaseResults, List<DiscreteCaseResults>> similarResults = new ConcurrentHashMap<>();
 
     /**
      * Default constructor.
@@ -60,83 +66,62 @@ public class TableDataMiner extends AbstractTableDataMiner<DiscreteCaseResults, 
     }
 
     @Override
-    protected Object getResultForColumn(final CaseResults originalResult, final String columnName) {
-        return TableDataMiner.getResultForColumnInAllProjects((DiscreteCaseResults) originalResult, columnName,
-                this.getAllResults());
+    public void addExtendedProject(final ExtendedProject project) {
+        super.addExtendedProject(project);
+        // null when the super constructor adds the first project
+        if (this.similarResults != null) {
+            this.similarResults.clear();
+        }
+    }
+
+    @Override
+    public void refreshCases() {
+        this.similarResults.clear();
+        super.refreshCases();
     }
 
     /**
-     * Get result for the given project
-     * If there is another ExtendedProject containing the column we return the result value of this project
-     * Otherwise we return the result value of the original ExtendedProject
-     *
-     * @param originalResult
-     *         case results associated to the original project
-     * @param columnName
-     *         column name to extract
-     * @param allResults
-     *         results of all projects
-     * @return an Object result
+     * The value of a column is taken from another project, which has the same variable values, when the original
+     * project has no valid value.
      */
-    private static Object getResultForColumnInAllProjects(final DiscreteCaseResults originalResult,
-            final String columnName, final Collection<DiscreteCaseResults> allResults) {
-        final Object resultObj = originalResult.getResult(columnName);
-        if (TableDataMiner.isResultValid(resultObj)) {
-            return resultObj;
+    @Override
+    protected Object getResultForColumn(final CaseResults originalResult, final String columnName) {
+        final DiscreteCaseResults original = (DiscreteCaseResults) originalResult;
+        final Object result = original.getResult(columnName);
+        if (TableDataMiner.isResultValid(result)) {
+            return result;
         }
-
-        final Map<String, Object> originalInputValues = originalResult.getCase().getInputValues();
-        for (final DiscreteCaseResults otherResults : allResults) {
-            if (!otherResults.equals(originalResult)) {
-                boolean same = true;
-                for (final Map.Entry<String, Object> entry : originalInputValues.entrySet()) {
-                    if (!otherResults.getValueForVariable(entry.getKey())
-                            .equals(originalResult.getValueForVariable(entry.getKey()))) {
-                        same = false;
-                        break;
-                    }
-                }
-                if (same) {
-                    final Object result = otherResults.getResult(columnName);
-                    if (TableDataMiner.isResultValid(result)) {
-                        return result;
-                    }
-                }
-            }
-        }
-        return originalResult.getResult(columnName);
+        return this.getSimilarResults(original).stream()
+                .map(other -> other.getResult(columnName))
+                .filter(TableDataMiner::isResultValid)
+                .findFirst()
+                .orElse(result);
     }
 
     private static boolean isResultValid(final Object result) {
-        return !result.equals("?");
+        return (result != null) && !"?".equals(result);
     }
 
     /**
-     * Get results that has same variables values than the originalResult
-     *
      * @param originalResult
-     * @return
+     *         the results of a case
+     * @return the results of the other cases, of all the projects, that have the same variable values. They are
+     *         searched once for each case, until the cases are refreshed.
      */
-    public static Collection<DiscreteCaseResults> getSimilarResults(final DiscreteCaseResults originalResult,
+    public List<DiscreteCaseResults> getSimilarResults(final DiscreteCaseResults originalResult) {
+        return this.similarResults.computeIfAbsent(originalResult,
+                original -> TableDataMiner.findSimilarResults(original, this.getAllResults()));
+    }
+
+    private static List<DiscreteCaseResults> findSimilarResults(final DiscreteCaseResults originalResult,
             final Collection<DiscreteCaseResults> allResults) {
-        final List<DiscreteCaseResults> similarResults = new ArrayList<>();
-        final Map<String, Object> originalInputValues = originalResult.getCase().getInputValues();
-        for (final DiscreteCaseResults otherResults : allResults) {
-            if (!otherResults.equals(originalResult)) {
-                boolean same = true;
-                for (final Map.Entry<String, Object> entry : originalInputValues.entrySet()) {
-                    if (!otherResults.getValueForVariable(entry.getKey())
-                            .equals(originalResult.getValueForVariable(entry.getKey()))) {
-                        same = false;
-                        break;
-                    }
-                }
-                if (same) {
-                    similarResults.add(otherResults);
-                }
-            }
-        }
-        return similarResults;
+        final Set<String> variables = originalResult.getCase().getInputValues().keySet();
+        return allResults.stream()
+                .filter(other -> !other.equals(originalResult))
+                .filter(other -> variables.stream().allMatch(
+                        variable -> Objects.equals(other.getValueForVariable(variable),
+                                originalResult.getValueForVariable(variable))))
+                .toList();
     }
 
     @Override
@@ -148,8 +133,9 @@ public class TableDataMiner extends AbstractTableDataMiner<DiscreteCaseResults, 
     protected TableColumn<CaseResults, DiscreteCaseResults> createColumn(final String name) {
         final TableColumn<CaseResults, DiscreteCaseResults> resultsColumn = new TableColumn<>(name);
         resultsColumn.setCellValueFactory(c -> (DiscreteCaseResults) c.getValue());
-        final Collection<DiscreteCaseResults> allResults = this.getAllResults();
-        resultsColumn.setCellFactory(param -> new MultipleResultTableCell(name, allResults, this.getColumnsFormat()));
+        final Map<String, String> columnsFormat = this.getColumnsFormat();
+        resultsColumn.setCellFactory(
+                param -> new MultipleResultTableCell(name, this::getSimilarResults, columnsFormat));
         resultsColumn.setComparator(TableViewUtils.createDiscretCaseResultsColumnComparator(name));
         return resultsColumn;
     }
