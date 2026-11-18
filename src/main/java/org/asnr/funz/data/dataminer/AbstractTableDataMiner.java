@@ -272,11 +272,12 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
      * @param file
      *         the file to write, completed by the extension of the format when it has none
      * @param extension
-     *         the format: CSV, or XLSX for a workbook of Excel
+     *         the format: CSV, or XLSX for a workbook of Excel (XLS, as before, is written as XLSX)
      */
     public void exportTo(File file, final String extension) {
+        final String format = AbstractTableDataMiner.exportFormat(extension);
         if (!file.getName().contains(".")) {
-            final String fileExtension = "." + extension.toLowerCase();
+            final String fileExtension = "." + format.toLowerCase();
             final File originalFile = new File(file.getAbsolutePath());
             file = new File(file.getAbsolutePath() + fileExtension);
             int cmp = 1;
@@ -305,9 +306,9 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
         }
 
         try {
-            if (extension.equalsIgnoreCase("csv")) {
+            if (format.equals("CSV")) {
                 TableExport.writeCsv(file, header, rows);
-            } else if (extension.equalsIgnoreCase("xlsx")) {
+            } else if (format.equals("XLSX")) {
                 TableExport.writeWorkbook(file, header, rows);
             } else {
                 LoggerFactory.getLogger(this.getClass()).error("Unsupported file format: {}", extension);
@@ -371,9 +372,10 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
             fileChooser.setInitialDirectory(lastSaveDir);
         }
         fileChooser.setTitle(ArtTkDictionary.SAVE.getString());
-        if (extension.equals("CSV")) {
+        final String format = AbstractTableDataMiner.exportFormat(extension);
+        if (format.equals("CSV")) {
             fileChooser.getExtensionFilters().addAll(new ExtensionFilter("CSV files (*.csv)", "*.csv"));
-        } else if (extension.equals("XLSX")) {
+        } else if (format.equals("XLSX")) {
             fileChooser.getExtensionFilters().addAll(new ExtensionFilter("Excel files (*.xlsx)", "*.xlsx"));
         }
 
@@ -382,6 +384,16 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
         if (file != null) {
             this.exportTo(file, extension);
         }
+    }
+
+    /**
+     * @param extension
+     *         the format asked: CSV, XLSX, or XLS that the callers used before XLSX, in any case
+     * @return the format of the export, in upper case: XLS is written as XLSX, which it already was
+     */
+    static String exportFormat(final String extension) {
+        final String format = extension.toUpperCase();
+        return format.equals("XLS") ? "XLSX" : format;
     }
 
     private void recomputeColumns() {
