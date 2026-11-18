@@ -16,6 +16,7 @@ package org.asnr.funz.data.controller;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -249,7 +250,7 @@ abstract class AbstractDataMinerController extends AbstractDynamicUpdateControll
                 // If it is a String we encapsulate it with simple quote (double quotes cannot be passed to html for
                 // web view as the parcoords.html ?)
                 if (!AbstractDataMinerController.isNumeric(parameterValue)) {
-                    parameterValue = "'" + parameterValue + "'";
+                    parameterValue = AbstractDataMinerController.quoted(parameterValue);
                 }
 
                 parameters.get(variableName)[index] = parameterValue;
@@ -257,6 +258,29 @@ abstract class AbstractDataMinerController extends AbstractDynamicUpdateControll
         }
 
         return Data.asString(parameters);
+    }
+
+    /**
+     * @param value
+     *         a text value of the views
+     * @return the value between simple quotes, which the views change to the double quotes of JSON: the quotes and
+     *         backslashes of the value are replaced by typographic ones, which would end it
+     */
+    static String quoted(final String value) {
+        return "'" + value.replace('\\', '/').replace('\'', '\u2019').replace('"', '\u201D') + "'";
+    }
+
+    /**
+     * @param values
+     *         the values of a result in the cases
+     * @return the values for the views, which plot numbers: the values that are not numbers (a failed case) are not
+     *         numbers; null when none is a number
+     */
+    static Object[] numericValues(final Object[] values) {
+        if (Arrays.stream(values).noneMatch(Number.class::isInstance)) {
+            return null;
+        }
+        return Arrays.stream(values).map(value -> value instanceof Number ? value : Double.NaN).toArray();
     }
 
     private static boolean isNumeric(final String strNum) {

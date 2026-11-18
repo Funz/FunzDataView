@@ -65,11 +65,11 @@ final class DataTabController extends AbstractDataMinerController {
         final Map<String, Object[]> results = HashMap.newHashMap(outputNames.length);
 
         for (final String outputName : outputNames) {
-            final Object[] array = this.getProject().getResultModel().getDiscreteResults().stream()
-                    .map(r -> r.getResult(outputName)).toArray(Object[]::new);
-
             // We want only numeric value here for web viewer (parcoord, scatterplot)
-            if (array != null && array.length > 0 && array[0] instanceof Double) {
+            final Object[] array = AbstractDataMinerController.numericValues(
+                    this.getProject().getResultModel().getDiscreteResults().stream()
+                            .map(r -> r.getResult(outputName)).toArray());
+            if (array != null) {
                 results.put(outputName, array);
             }
         }
