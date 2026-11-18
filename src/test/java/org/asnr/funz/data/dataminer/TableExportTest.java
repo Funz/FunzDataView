@@ -20,7 +20,6 @@ import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -78,18 +77,6 @@ public class TableExportTest {
             // the texts that Java reads as numbers but are names
             Assert.assertEquals("2d", workbook.getSheetAt(0).getRow(3).getCell(0).getStringCellValue());
             Assert.assertEquals("?", workbook.getSheetAt(0).getRow(2).getCell(1).getStringCellValue());
-        }
-    }
-
-    @Test
-    public void aXlsFileIsInTheOldFormatOfExcel() throws IOException {
-        final File file = this.folder.newFile("results.xls");
-
-        TableExport.writeWorkbook(file, TableExportTest.HEADER, TableExportTest.ROWS);
-
-        try (final Workbook workbook = WorkbookFactory.create(file)) {
-            Assert.assertTrue(workbook instanceof HSSFWorkbook);
-            Assert.assertEquals("keff", workbook.getSheetAt(0).getRow(0).getCell(1).getStringCellValue());
         }
     }
 }

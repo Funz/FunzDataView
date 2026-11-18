@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -113,8 +112,8 @@ final class TableExport {
     }
 
     /**
-     * Writes a workbook of Excel: in the old format for a ".xls" file, in the format of Excel 2007 otherwise. The
-     * numbers are written as numbers, so that the spreadsheet computes with them.
+     * Writes a workbook of Excel (XLSX): the numbers are written as numbers, so that the spreadsheet computes with
+     * them.
      *
      * @param file
      *         the file to write
@@ -127,9 +126,7 @@ final class TableExport {
      */
     static void writeWorkbook(final File file, final List<String> header, final List<List<Object>> rows)
             throws IOException {
-        try (final Workbook workbook = file.getName().toLowerCase().endsWith(".xls") ?
-                new HSSFWorkbook() :
-                new XSSFWorkbook(); final FileOutputStream output = new FileOutputStream(file)) {
+        try (final Workbook workbook = new XSSFWorkbook(); final FileOutputStream output = new FileOutputStream(file)) {
             final Sheet sheet = workbook.createSheet("Export");
             final Row headerRow = sheet.createRow(0);
             for (int column = 0; column < header.size(); column++) {

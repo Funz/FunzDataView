@@ -131,14 +131,14 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
         multipleColumnChooserButton.setOnAction(
                 e -> this.displayColumnDialog(FxHelper.getWindow(multipleColumnChooserButton)));
 
-        // Export to CSV/XLS button
+        // Export to CSV/XLSX button
         final MenuButton exportToButton = new MenuButton(ResultsDictionary.EXPORT_TO.getString());
         final MenuItem exportToCSVItem = new MenuItem("CSV");
-        final MenuItem exportToXLSItem = new MenuItem("XLS");
+        final MenuItem exportToXLSXItem = new MenuItem("XLSX");
         exportToCSVItem.setOnAction(event -> this.exportTo("CSV"));
-        exportToXLSItem.setOnAction(event -> this.exportTo("XLS"));
+        exportToXLSXItem.setOnAction(event -> this.exportTo("XLSX"));
         exportToButton.getItems().add(exportToCSVItem);
-        exportToButton.getItems().add(exportToXLSItem);
+        exportToButton.getItems().add(exportToXLSXItem);
 
         final HBox toolbar = new HBox(5, hBox, multipleColumnChooserButton, exportToButton);
         toolbar.setAlignment(Pos.CENTER_RIGHT);
@@ -272,12 +272,11 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
      * @param file
      *         the file to write, completed by the extension of the format when it has none
      * @param extension
-     *         the format: CSV, or XLS for a workbook of Excel (in the format of Excel 2007, unless the file name
-     *         ends with ".xls")
+     *         the format: CSV, or XLSX for a workbook of Excel
      */
     public void exportTo(File file, final String extension) {
         if (!file.getName().contains(".")) {
-            final String fileExtension = AbstractTableDataMiner.fileExtension(extension);
+            final String fileExtension = "." + extension.toLowerCase();
             final File originalFile = new File(file.getAbsolutePath());
             file = new File(file.getAbsolutePath() + fileExtension);
             int cmp = 1;
@@ -308,7 +307,7 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
         try {
             if (extension.equalsIgnoreCase("csv")) {
                 TableExport.writeCsv(file, header, rows);
-            } else if (extension.equalsIgnoreCase("xls") || extension.equalsIgnoreCase("xlsx")) {
+            } else if (extension.equalsIgnoreCase("xlsx")) {
                 TableExport.writeWorkbook(file, header, rows);
             } else {
                 LoggerFactory.getLogger(this.getClass()).error("Unsupported file format: {}", extension);
@@ -316,13 +315,6 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
         } catch (final IOException | RuntimeException e) {
             LoggerFactory.getLogger(this.getClass()).error("Unable to export the results in {}", file, e);
         }
-    }
-
-    /**
-     * @return the extension of the files of the format: a workbook of Excel is written in the format of Excel 2007
-     */
-    private static String fileExtension(final String format) {
-        return format.equalsIgnoreCase("xls") ? ".xlsx" : "." + format.toLowerCase();
     }
 
     protected Object getResultForColumn(final CaseResults caseResult, final String columnName) {
@@ -381,9 +373,8 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
         fileChooser.setTitle(ArtTkDictionary.SAVE.getString());
         if (extension.equals("CSV")) {
             fileChooser.getExtensionFilters().addAll(new ExtensionFilter("CSV files (*.csv)", "*.csv"));
-        } else if (extension.equals("XLS")) {
-            fileChooser.getExtensionFilters().addAll(new ExtensionFilter("Excel files (*.xlsx)", "*.xlsx"),
-                    new ExtensionFilter("Excel 97-2003 files (*.xls)", "*.xls"));
+        } else if (extension.equals("XLSX")) {
+            fileChooser.getExtensionFilters().addAll(new ExtensionFilter("Excel files (*.xlsx)", "*.xlsx"));
         }
 
         // nothing to do when the user cancels
