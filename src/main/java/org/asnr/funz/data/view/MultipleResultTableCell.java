@@ -14,11 +14,13 @@
  */
 package org.asnr.funz.data.view;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.asnr.funz.data.dataminer.TableDataMiner;
 import org.asnr.funz.data.model.CaseResults;
 import org.asnr.funz.data.model.DiscreteCaseResults;
 import org.asnr.funz.data.view.common.ResultCaseTableCell;
@@ -34,6 +36,23 @@ public class MultipleResultTableCell extends ResultCaseTableCell<CaseResults> {
 
     private final Function<DiscreteCaseResults, List<DiscreteCaseResults>> similarResults;
     private final Map<String, String> columnsFormat;
+
+    /**
+     * @param outputFunctionName
+     *         name of the output function of the column
+     * @param results
+     *         the results where a missing value is searched, in the cases with the same variable values
+     * @param columnsFormat
+     *         the formats of the values, by column
+     * @deprecated searches at each display of the cell: give the search of {@link TableDataMiner}
+     */
+    @Deprecated
+    public MultipleResultTableCell(final String outputFunctionName, final Collection<DiscreteCaseResults> results,
+            final Map<String, String> columnsFormat) {
+        this(outputFunctionName, result -> results == null ?
+                List.of() :
+                List.copyOf(TableDataMiner.getSimilarResults(result, results)), columnsFormat);
+    }
 
     /**
      * @param outputFunctionName

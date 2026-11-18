@@ -29,10 +29,10 @@ public class AbstractDataMinerControllerTest {
     }
 
     @Test
-    public void theResultsThatAreNotNumbersAreNotNumbersInTheViews() {
+    public void theResultsThatAreNotNumbersAreMissingInTheViews() {
         final Object[] values = AbstractDataMinerController.numericValues(new Object[] { "FAILED", 1.02, "?" });
 
-        Assert.assertArrayEquals(new Object[] { Double.NaN, 1.02, Double.NaN }, values);
+        Assert.assertArrayEquals(new Object[] { "?", 1.02, "?" }, values);
     }
 
     @Test

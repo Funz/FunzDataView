@@ -273,14 +273,14 @@ abstract class AbstractDataMinerController extends AbstractDynamicUpdateControll
     /**
      * @param values
      *         the values of a result in the cases
-     * @return the values for the views, which plot numbers: the values that are not numbers (a failed case) are not
-     *         numbers; null when none is a number
+     * @return the values for the views, which plot numbers: the values that are not numbers (a failed case) are
+     *         "?", as a missing result, which the views already read; null when none is a number
      */
     static Object[] numericValues(final Object[] values) {
         if (Arrays.stream(values).noneMatch(Number.class::isInstance)) {
             return null;
         }
-        return Arrays.stream(values).map(value -> value instanceof Number ? value : Double.NaN).toArray();
+        return Arrays.stream(values).map(value -> value instanceof Number ? value : "?").toArray();
     }
 
     private static boolean isNumeric(final String strNum) {

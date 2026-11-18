@@ -113,6 +113,20 @@ public class TableDataMiner extends AbstractTableDataMiner<DiscreteCaseResults, 
                 original -> TableDataMiner.findSimilarResults(original, this.getAllResults()));
     }
 
+    /**
+     * @param originalResult
+     *         the results of a case
+     * @param allResults
+     *         the results of the cases where they are searched
+     * @return the results of the other cases that have the same variable values
+     * @deprecated searches at each call: {@link #getSimilarResults(DiscreteCaseResults)} searches once for each case
+     */
+    @Deprecated
+    public static Collection<DiscreteCaseResults> getSimilarResults(final DiscreteCaseResults originalResult,
+            final Collection<DiscreteCaseResults> allResults) {
+        return TableDataMiner.findSimilarResults(originalResult, allResults);
+    }
+
     private static List<DiscreteCaseResults> findSimilarResults(final DiscreteCaseResults originalResult,
             final Collection<DiscreteCaseResults> allResults) {
         final Set<String> variables = originalResult.getCase().getInputValues().keySet();
