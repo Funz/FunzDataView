@@ -104,6 +104,22 @@ final class FilesTabController implements Initializable {
 
     private boolean updateControlsVisible = true;
 
+    /**
+     * The number of the last loading of the tree: a loading that another one, or a clearing, followed is not shown.
+     * On the FX thread.
+     */
+    private int treeGeneration;
+
+    /**
+     * Whether the tree is loading. On the FX thread.
+     */
+    private boolean treeLoading;
+
+    /**
+     * The selection asked while the tree was loading, done once it is loaded. On the FX thread.
+     */
+    private Runnable pendingSelection;
+
     @FXML
     private SplitPane splitPane;
     @FXML
@@ -156,7 +172,7 @@ final class FilesTabController implements Initializable {
         this.project.addCaseModifiedListener((index, what) -> {
             final Case caseToAdd = this.project.getCases().get(index);
             if (this.alwaysUpdateCheckbox.isSelected() && caseToAdd.hasRun() && what == Case.MODIFIED_STATE) {
-                this.fillTree();
+                Platform.runLater(this::fillTree);
             }
         });
         this.webviewLoader = new WebViewSynchronousScriptExecutor(this.webview);
@@ -416,6 +432,10 @@ final class FilesTabController implements Initializable {
     }
 
     public void selectItem(final String pathRegex, final String fileRegex) {
+        if (this.treeLoading) {
+            this.pendingSelection = () -> this.selectItem(pathRegex, fileRegex);
+            return;
+        }
         final TreeItem<File> root = this.filesTree.getRoot();
         if (root != null) {
 
@@ -525,9 +545,30 @@ final class FilesTabController implements Initializable {
 
     }
 
+    /**
+     * Loads the files in the tree, out of the FX thread since the results may have many files. <b>On the FX
+     * thread.</b>
+     */
     private void fillTree() {
-        this.loadContentIntoTree(this.project.getResultsDir());
+        final int generation = ++this.treeGeneration;
+        this.treeLoading = true;
+        final File directory = this.project.getResultsDir();
+        Thread.ofVirtual().start(() -> {
+            final SearchableTreeItem<File> root = this.createItem(directory);
+            Platform.runLater(() -> {
+                if (generation == this.treeGeneration) {
+                    this.treeLoading = false;
+                    this.filesTree.setRoot(root);
+                    final Runnable selection = this.pendingSelection;
+                    this.pendingSelection = null;
+                    if (selection != null) {
+                        selection.run();
+                    }
+                }
+            });
+        });
     }
+
 
     private SearchableTreeItem<File> createItem(final File file) {
         final SearchableTreeItem<File> curentItem = new SearchableTreeItem<>(file);
@@ -535,7 +576,8 @@ final class FilesTabController implements Initializable {
         // List children
         if (file.isDirectory()) {
             // Sorts the directory before the files and then create an item for each
-            Arrays.stream(file.listFiles()).sorted((o1, o2) -> {
+            final File[] files = file.listFiles();
+            Arrays.stream(files == null ? new File[0] : files).sorted((o1, o2) -> {
                 if (o1.isDirectory() && !o2.isDirectory()) {
                     return -1;
                 } else if (!o1.isDirectory() && o2.isDirectory()) {
@@ -549,14 +591,14 @@ final class FilesTabController implements Initializable {
         return curentItem;
     }
 
-    private void loadContentIntoTree(final File directory) {
-        this.filesTree.setRoot(this.createItem(directory));
-    }
-
     /**
      * Clear the tree (and the viewer) from all its content.
      */
     private void clearTree() {
+        // the loading of the tree in progress is not shown
+        this.treeGeneration++;
+        this.treeLoading = false;
+        this.pendingSelection = null;
         this.filesTree.setRoot(null);
         this.editor.closeFile();
         this.filesSearchField.setText(null);
