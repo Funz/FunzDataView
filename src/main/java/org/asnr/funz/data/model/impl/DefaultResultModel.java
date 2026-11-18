@@ -22,10 +22,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BinaryOperator;
-import java.util.stream.Collectors;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.asnr.funz.data.model.DiscreteCaseResults;
 import org.asnr.funz.data.model.DoeCaseResults;
@@ -64,14 +65,25 @@ public class DefaultResultModel extends ObservableValueBase<Collection<DiscreteC
     private final Set<String> discreteVariables;
 
     /**
-     * All the cases for the current project, stored by index.
+     * All the cases for the current project, stored by index, or the groups of cases. Replaced, never modified, since
+     * it is read by the view while the results are updated.
      */
-    private Map<Integer, DiscreteCaseResults> cases;
+    private volatile Map<Integer, DiscreteCaseResults> cases;
 
     /**
      * All the original cases for the current project, stored by index.
      */
-    private final Map<Integer, DiscreteCaseResults> originalCases;
+    private final Map<Integer, CaseExtractor> originalCases;
+
+    /**
+     * The variable whose values are grouped, null when the cases are not grouped.
+     */
+    private volatile String groupedVariable;
+
+    /**
+     * Updates the results, one after the other, out of the FX thread.
+     */
+    private final ThreadPoolExecutor updates;
 
     /**
      * DOE cases.
@@ -99,7 +111,10 @@ public class DefaultResultModel extends ObservableValueBase<Collection<DiscreteC
         this.variables = new HashSet<>();
         this.discreteVariables = new HashSet<>();
         this.cases = new HashMap<>();
-        this.originalCases = new HashMap<>();
+        this.originalCases = new ConcurrentHashMap<>();
+        this.updates = new ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+                Thread.ofPlatform().daemon().name("result-model-update").factory());
+        this.updates.allowCoreThreadTimeOut(true);
         this.doeCases = new ArrayList<>();
         this.doeOutputs = new ArrayList<>();
 
@@ -122,14 +137,14 @@ public class DefaultResultModel extends ObservableValueBase<Collection<DiscreteC
         this.project.addCaseModifiedListener((index, what) -> {
             switch (what) {
             case Case.MODIFIED_CALC, Case.MODIFIED_STATE ->
-                    Executors.defaultThreadFactory().newThread(() -> this.refreshCase(index)).start();
+                    this.updates.execute(() -> this.refreshCase(index));
             case Case.MODIFIED_INFO, Case.MODIFIED_TIME -> this.fireValueChangedEvent();
             }
         });
 
         // When design updated, we refresh the corresponding line (using the design index)
         this.project.addDesignUpdatedListener(
-                index -> Executors.defaultThreadFactory().newThread(() -> this.refreshCase(index)).start());
+                index -> this.updates.execute(() -> this.refreshCase(index)));
     }
 
     @Override
@@ -194,7 +209,8 @@ public class DefaultResultModel extends ObservableValueBase<Collection<DiscreteC
     private void clearModel() {
         this.variables.clear();
         this.discreteVariables.clear();
-        this.cases.clear();
+        this.cases = new HashMap<>();
+        this.originalCases.clear();
         this.doeCases.clear();
         this.doeOutputs.clear();
         this.haveDesign = false;
@@ -205,7 +221,7 @@ public class DefaultResultModel extends ObservableValueBase<Collection<DiscreteC
      * Fill the model with cases and variables.
      */
     private void fillModel() {
-        Executors.defaultThreadFactory().newThread(() -> {
+        this.updates.execute(() -> {
             this.resultName = ExtendedProjectUtils.getResultName(this.project);
 
             // Create variables
@@ -231,7 +247,7 @@ public class DefaultResultModel extends ObservableValueBase<Collection<DiscreteC
                 }
             }
             this.fireValueChangedEvent();
-        }).start();
+        });
     }
 
     /**
@@ -277,11 +293,11 @@ public class DefaultResultModel extends ObservableValueBase<Collection<DiscreteC
 
         final CaseList projectCases = this.project.getCases();
         if ((projectCases != null) && (projectCases.size() > index)) {
-            if (this.cases.size() != projectCases.size()) {
+            if (this.originalCases.size() != projectCases.size()) {
                 this.createExtractors();
             }
 
-            ((CaseExtractor) this.cases.get(index)).update();
+            this.originalCases.get(index).update();
         }
     }
 
@@ -290,7 +306,7 @@ public class DefaultResultModel extends ObservableValueBase<Collection<DiscreteC
         for (int index = 0; index < projectCases.size(); index++) {
             this.originalCases.computeIfAbsent(index, i -> new CaseExtractor(this.project, projectCases.get(i)));
         }
-        this.cases = new HashMap<>(this.originalCases);
+        this.cases = this.buildCases();
 
         this.fireValueChangedEvent();
     }
@@ -338,56 +354,39 @@ public class DefaultResultModel extends ObservableValueBase<Collection<DiscreteC
         return this.variables.equals(other.variables);
     }
 
+    /**
+     * Groups the cases that differ only by the value of a variable: the different values of the variables of a group
+     * are listed, and the means of its results are shown.
+     *
+     * @param selectedParameter
+     *         the variable, "None" to show each case
+     */
     public void groupVariable(final String selectedParameter) {
-        if (selectedParameter.equals("None")) {
-            this.cases = new HashMap<>(this.originalCases);
-        } else {
-            final Collection<String> variablesToGroup = new ArrayList<>(this.getDiscreteVariables());
-            variablesToGroup.remove(selectedParameter);
-
-            this.cases.clear();
-            final List<List<DiscreteCaseResults>> caseResultsGroups = DefaultResultModel.groupByVariableValues(
-                    this.originalCases.values(), variablesToGroup);
-            final BinaryOperator<String> variableMerger = (v1, v2) -> (v1 != null && v1.equals(v2)) ?
-                    v1 :
-                    v1 + "," + v2;
-            final BinaryOperator<String> valuesMerger = (v1, v2) -> {
-                try {
-                    // Attempt to parse the strings as doubles
-                    final double d1 = Double.parseDouble(v1);
-                    final double d2 = Double.parseDouble(v2);
-                    // Calculate the mean and return it as a string
-                    return String.valueOf((d1 + d2) / 2);
-                } catch (final NumberFormatException e) {
-                    // Return "?" if either of the values cannot be parsed as a double
-                    return "?";
-                }
-            };
-
-            final AtomicInteger key = new AtomicInteger();
-            caseResultsGroups.forEach(caseResultsGroup -> {
-                final List<CaseExtractor> caseExtractorsList = caseResultsGroup.stream() //
-                        .map(CaseExtractor.class::cast) //
-                        .toList();
-                final MergeCaseExtractor mergeCaseExtractor = new MergeCaseExtractor(caseExtractorsList,
-                        this.getDiscreteVariables(), variableMerger, valuesMerger);
-                this.cases.put(key.getAndIncrement(), mergeCaseExtractor);
-            });
-        }
+        this.groupedVariable = "None".equals(selectedParameter) ? null : selectedParameter;
+        this.cases = this.buildCases();
         super.fireValueChangedEvent();
     }
 
-    private static List<List<DiscreteCaseResults>> groupByVariableValues(
-            final Collection<DiscreteCaseResults> caseResults, final Collection<String> variableNames) {
-        final Map<String, List<DiscreteCaseResults>> groupedMap = new HashMap<>();
-
-        for (final DiscreteCaseResults caseResult : caseResults) {
-            final String key = variableNames.stream().map(caseResult::getValueForVariable)
-                    .collect(Collectors.joining("-"));
-
-            groupedMap.computeIfAbsent(key, k -> new ArrayList<>()).add(caseResult);
+    /**
+     * @return the cases, or their groups by the values of the variables other than the grouped one
+     */
+    private Map<Integer, DiscreteCaseResults> buildCases() {
+        final Map<Integer, DiscreteCaseResults> built = new HashMap<>();
+        final String grouped = this.groupedVariable;
+        if (grouped == null) {
+            built.putAll(this.originalCases);
+            return built;
         }
-
-        return new ArrayList<>(groupedMap.values());
+        final List<String> others = this.getDiscreteVariables().stream()
+                .filter(variable -> !variable.equals(grouped))
+                .sorted()
+                .toList();
+        final List<List<CaseExtractor>> groups = ResultAggregation.groupBy(
+                new TreeMap<>(this.originalCases).values(),
+                extractor -> others.stream().map(extractor::getValueForVariable).toList());
+        for (int index = 0; index < groups.size(); index++) {
+            built.put(index, new MergeCaseExtractor(groups.get(index), this.getDiscreteVariables()));
+        }
+        return built;
     }
 }

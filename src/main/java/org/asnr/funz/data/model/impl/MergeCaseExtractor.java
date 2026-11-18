@@ -15,10 +15,9 @@
 package org.asnr.funz.data.model.impl;
 
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BinaryOperator;
 
 import org.asnr.funz.data.model.DiscreteCaseResults;
 import org.funz.parameter.Case;
@@ -35,18 +34,16 @@ class MergeCaseExtractor extends ObservableValueBase<DiscreteCaseResults> implem
 
     private final List<CaseExtractor> subCases;
 
-    private final BinaryOperator<String> variablesMerger;
-    private final BinaryOperator<String> valuesMerger;
     private final Collection<String> variables;
 
     /**
-     *
+     * @param subCases
+     *         the cases of the group
+     * @param variables
+     *         the variables, whose different values are listed: the means of the other values are shown
      */
-    public MergeCaseExtractor(final List<CaseExtractor> subCases, final Collection<String> variables,
-            final BinaryOperator<String> variablesMerger, final BinaryOperator<String> valuesMerger) {
+    public MergeCaseExtractor(final List<CaseExtractor> subCases, final Collection<String> variables) {
         this.subCases = subCases;
-        this.variablesMerger = variablesMerger;
-        this.valuesMerger = valuesMerger;
         this.variables = variables;
     }
 
@@ -69,8 +66,8 @@ class MergeCaseExtractor extends ObservableValueBase<DiscreteCaseResults> implem
 
     @Override
     public String getValueForVariable(final String variableName) {
-        return this.subCases.stream().map(c -> c.getValueForVariable(variableName)).reduce(this.variablesMerger)
-                .orElse("");
+        return ResultAggregation.mergeVariable(
+                this.subCases.stream().map(c -> c.getValueForVariable(variableName)).toList());
     }
 
     @Override
@@ -85,10 +82,7 @@ class MergeCaseExtractor extends ObservableValueBase<DiscreteCaseResults> implem
 
     @Override
     public Map<String, Object> getOtherResults(final String customMainFunction) {
-        return this.subCases.stream() //
-                .map(c -> c.getOtherResults(customMainFunction)) //
-                .reduce(this::mergeMap) //
-                .orElse(Map.of());
+        return this.mergeMaps(this.subCases.stream().map(c -> c.getOtherResults(customMainFunction)).toList());
     }
 
     @Override
@@ -147,10 +141,7 @@ class MergeCaseExtractor extends ObservableValueBase<DiscreteCaseResults> implem
      * @return the raw output
      */
     Map<String, Object> getRawOutput() {
-        return this.subCases.stream() //
-                .map(CaseExtractor::getRawOutput) //
-                .reduce(this::mergeMap) //
-                .orElse(Map.of());
+        return this.mergeMaps(this.subCases.stream().map(CaseExtractor::getRawOutput).toList());
     }
 
     /**
@@ -161,25 +152,25 @@ class MergeCaseExtractor extends ObservableValueBase<DiscreteCaseResults> implem
      * @return the raw result
      */
     Object getRawResult(final String mainFunction) {
-        return this.subCases.stream().map(c -> c.getRawResult(mainFunction).toString()).reduce(this.valuesMerger)
-                .orElse(null);
+        return ResultAggregation.mergeResult(
+                this.subCases.stream().map(c -> Data.asString(c.getRawResult(mainFunction))).toList());
     }
 
-    private Map<String, Object> mergeMap(final Map<String, Object> map1, final Map<String, Object> map2) {
-        final Map<String, Object> result = HashMap.newHashMap(map1.size());
-
-        for (final Map.Entry<String, Object> e1 : map1.entrySet()) {
-            final String v1 = e1.getValue().toString();
-            final String v2 = map2.get(e1.getKey()).toString();
-            if (this.variables.contains(e1.getKey())) {
-                result.put(e1.getKey(), this.variablesMerger.apply(v1, v2));
-            } else {
-                result.put(e1.getKey(), this.valuesMerger.apply(v1, v2));
-            }
-        }
-
+    /**
+     * @return the merged values of the keys of the maps: a key missing in a map is merged from the other maps
+     */
+    private Map<String, Object> mergeMaps(final List<Map<String, Object>> maps) {
+        final Map<String, Object> result = new LinkedHashMap<>();
+        maps.stream().flatMap(map -> map.keySet().stream()).distinct().forEach(key -> {
+            final List<String> values = maps.stream()
+                    .filter(map -> map.containsKey(key))
+                    .map(map -> Data.asString(map.get(key)))
+                    .toList();
+            result.put(key, this.variables.contains(key) ?
+                    ResultAggregation.mergeVariable(values) :
+                    ResultAggregation.mergeResult(values));
+        });
         return result;
     }
-
 }
 
