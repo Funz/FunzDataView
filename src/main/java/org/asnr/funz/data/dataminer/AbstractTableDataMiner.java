@@ -15,11 +15,8 @@
 package org.asnr.funz.data.dataminer;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -29,12 +26,6 @@ import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.swing.JOptionPane;
-
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.asnr.funz.data.i18n.ResultsDictionary;
 import org.asnr.funz.data.model.CaseResults;
 import org.asnr.funz.data.model.DiscreteCaseResults;
@@ -65,7 +56,6 @@ import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -188,23 +178,18 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
     }
 
     /**
-     * Copy selected rows to clipboard with the column names at first line
+     * Copy the selected rows to the clipboard, with the names of the displayed columns at first line, separated by
+     * tabulations so that a spreadsheet splits them when pasting
      */
-    @SuppressWarnings("rawtypes")
     private void copySelectionToClipboard() {
-        final ObservableList<TablePosition> posList = this.valuesTable.getSelectionModel().getSelectedCells();
-        final StringBuilder clipboardString = new StringBuilder();
-        clipboardString.append(this.getColumnString(","));
-        clipboardString.append(System.lineSeparator());
-
-        for (final TablePosition p : posList) {
-            final int r = p.getRow();
-            clipboardString.append(this.getRowString(r, ","));
-            clipboardString.append(System.lineSeparator());
-
-        }
+        final List<String> header = this.valuesTable.getColumns().stream().map(TableColumn::getText).toList();
+        final List<List<Object>> rows = this.valuesTable.getSelectionModel().getSelectedIndices().stream()
+                .distinct()
+                .sorted()
+                .map(this::getRowValues)
+                .toList();
         final javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
-        content.putString(clipboardString.toString());
+        content.putString(TableExport.toClipboardText(header, rows));
         javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
     }
 
@@ -266,45 +251,38 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
     protected abstract Map<TableColumn<CaseResults, C>, Boolean> outputColumns();
 
     /**
-     * Get a String of names of all displayed columns separate by the separator
+     * @return the values of the displayed columns in the given row
      */
-    private String getColumnString(final String separator) {
-        String sep = "";
-        final StringBuilder sb = new StringBuilder();
+    private List<Object> getRowValues(final int row) {
+        final List<Object> values = new ArrayList<>();
         for (final TableColumn<CaseResults, ?> column : this.valuesTable.getColumns()) {
-            sb.append(sep);
-            sep = separator;
-            sb.append(column.getText());
+            final Object cellData = column.getCellData(row);
+            if (cellData instanceof final DiscreteCaseResults discreteCaseResults) {
+                values.add(discreteCaseResults.getStringResult(column.getText()));
+            } else {
+                values.add(cellData);
+            }
         }
-        return sb.toString();
+        return values;
     }
 
     /**
-     * Get a string of all values displayed in the table separated by the separator
+     * Exports the table in a file.
+     *
+     * @param file
+     *         the file to write, completed by the extension of the format when it has none
+     * @param extension
+     *         the format: CSV, or XLS for a workbook of Excel (in the format of Excel 2007, unless the file name
+     *         ends with ".xls")
      */
-    private String getRowString(final int row, final String separator) {
-        String sep = "";
-        final StringBuilder sb = new StringBuilder();
-        for (final TableColumn<CaseResults, ?> column : this.valuesTable.getColumns()) {
-            final Object cellData = column.getCellData(row);
-            sb.append(sep);
-            sep = separator;
-            if (cellData instanceof final DiscreteCaseResults discreteCaseResults) {
-                sb.append(discreteCaseResults.getStringResult(column.getText()));
-            } else {
-                sb.append(cellData.toString());
-            }
-        }
-        return sb.toString();
-    }
-
     public void exportTo(File file, final String extension) {
         if (!file.getName().contains(".")) {
+            final String fileExtension = AbstractTableDataMiner.fileExtension(extension);
             final File originalFile = new File(file.getAbsolutePath());
-            file = new File(file.getAbsolutePath() + "." + extension.toLowerCase());
+            file = new File(file.getAbsolutePath() + fileExtension);
             int cmp = 1;
             while (file.exists()) {
-                file = new File(originalFile.getAbsolutePath() + "(" + cmp + ")" + "." + extension.toLowerCase());
+                file = new File(originalFile.getAbsolutePath() + "(" + cmp + ")" + fileExtension);
                 cmp++;
             }
         }
@@ -318,83 +296,33 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
                 .sorted(String::compareToIgnoreCase)
                 .toList();
 
-        if (extension.equalsIgnoreCase("csv")) {
-            // Export as CSV
-            this.exportToCsv(file, variableNames, outputNames);
-        } else if (extension.equalsIgnoreCase("xls") || extension.equalsIgnoreCase("xlsx")) {
-            // Export as XLS/XLSX
-            this.exportToXlsx(file, variableNames, outputNames);
-        } else {
-            LoggerFactory.getLogger(this.getClass()).error("Unsupported file format: {}", extension);
+        final List<String> header = Stream.concat(variableNames.stream(), outputNames.stream()).toList();
+        final List<List<Object>> rows = new ArrayList<>();
+        for (final CaseResults caseResult : this.valuesTable.getItems()) {
+            final List<Object> row = new ArrayList<>();
+            variableNames.forEach(variableName -> row.add(caseResult.getValueForVariable(variableName)));
+            outputNames.forEach(columnName -> row.add(this.getResultForColumn(caseResult, columnName)));
+            rows.add(row);
+        }
+
+        try {
+            if (extension.equalsIgnoreCase("csv")) {
+                TableExport.writeCsv(file, header, rows);
+            } else if (extension.equalsIgnoreCase("xls") || extension.equalsIgnoreCase("xlsx")) {
+                TableExport.writeWorkbook(file, header, rows);
+            } else {
+                LoggerFactory.getLogger(this.getClass()).error("Unsupported file format: {}", extension);
+            }
+        } catch (final IOException | RuntimeException e) {
+            LoggerFactory.getLogger(this.getClass()).error("Unable to export the results in {}", file, e);
         }
     }
 
-    private void exportToCsv(final File file, final List<String> variableNames, final List<String> outputNames) {
-        try (final FileWriter fw = new FileWriter(file)) {
-            final CharSequence delimiter = ";";
-
-            // Write header
-            fw.write(
-                    Stream.concat(variableNames.stream(), outputNames.stream()).collect(Collectors.joining(delimiter)));
-            fw.write(System.lineSeparator());
-
-            // Write rows
-            for (final CaseResults caseResult : this.valuesTable.getItems()) {
-                final StringBuilder sb = new StringBuilder();
-
-                for (final String variableName : variableNames) {
-                    sb.append(caseResult.getValueForVariable(variableName));
-                    sb.append(delimiter);
-                }
-
-                for (final String columnName : outputNames) {
-                    final Object result = this.getResultForColumn(caseResult, columnName);
-                    sb.append(this.toString(result));
-                    sb.append(delimiter);
-                }
-
-                fw.write(sb.toString());
-                fw.write(System.lineSeparator());
-            }
-        } catch (final IOException e) {
-            LoggerFactory.getLogger(this.getClass()).error(e.getMessage());
-        }
-    }
-
-    private void exportToXlsx(final File file, final List<String> variableNames, final List<String> outputNames) {
-        try (final Workbook workbook = new XSSFWorkbook(); // For .xls, use HSSFWorkbook
-                final FileOutputStream fos = new FileOutputStream(file)) {
-
-            final Sheet sheet = workbook.createSheet("Export");
-            int rowIndex = 0;
-
-            // Write header
-            final Row headerRow = sheet.createRow(rowIndex++);
-            int cellIndex = 0;
-            for (final String name : Stream.concat(variableNames.stream(), outputNames.stream())
-                    .toArray(String[]::new)) {
-                headerRow.createCell(cellIndex++).setCellValue(name);
-            }
-
-            // Write rows
-            for (final CaseResults caseResult : this.valuesTable.getItems()) {
-                final Row row = sheet.createRow(rowIndex++);
-                cellIndex = 0;
-
-                for (final String variableName : variableNames) {
-                    row.createCell(cellIndex++).setCellValue(caseResult.getValueForVariable(variableName));
-                }
-
-                for (final String columnName : outputNames) {
-                    final Object result = this.getResultForColumn(caseResult, columnName);
-                    row.createCell(cellIndex++).setCellValue(this.toString(result));
-                }
-            }
-
-            workbook.write(fos);
-        } catch (final IOException e) {
-            LoggerFactory.getLogger(this.getClass()).error(e.getMessage());
-        }
+    /**
+     * @return the extension of the files of the format: a workbook of Excel is written in the format of Excel 2007
+     */
+    private static String fileExtension(final String format) {
+        return format.equalsIgnoreCase("xls") ? ".xlsx" : "." + format.toLowerCase();
     }
 
     protected Object getResultForColumn(final CaseResults caseResult, final String columnName) {
@@ -454,27 +382,14 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
         if (extension.equals("CSV")) {
             fileChooser.getExtensionFilters().addAll(new ExtensionFilter("CSV files (*.csv)", "*.csv"));
         } else if (extension.equals("XLS")) {
-            fileChooser.getExtensionFilters().addAll(new ExtensionFilter("XLS files (*.xls)", "*.xls"));
+            fileChooser.getExtensionFilters().addAll(new ExtensionFilter("Excel files (*.xlsx)", "*.xlsx"),
+                    new ExtensionFilter("Excel 97-2003 files (*.xls)", "*.xls"));
         }
 
-        final File file = fileChooser.showSaveDialog(null);
-        if (file == null) {
-            JOptionPane.showMessageDialog(null, ResultsDictionary.ERROR_SELECT_FILE.getString());
-        } else {
+        // nothing to do when the user cancels
+        final File file = fileChooser.showSaveDialog(this.valuesTable.getScene().getWindow());
+        if (file != null) {
             this.exportTo(file, extension);
-        }
-    }
-
-    private String toString(final Object arr) {
-        if (arr instanceof final Object[] obj) {
-            return Arrays.toString(obj);
-        } else {
-            if (arr instanceof final double[] doubles) {
-                return Arrays.toString(doubles);
-            } else {
-                return arr.toString();
-            }
-
         }
     }
 
@@ -515,7 +430,8 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
     private void parametersColumns() {
         final List<String> variables = this.getVariables().stream().sorted().toList();
 
-        if (variables.size() > 1 || !variables.getFirst().equals(Project.SINGLE_PARAM_NAME)) {
+        if (variables.size() > 1 || (variables.size() == 1 && !variables.getFirst().equals(
+                Project.SINGLE_PARAM_NAME))) {
             for (final String variableName : variables) {
                 final String variableNameModified = AbstractTableDataMiner.VAR_PREFIX + variableName;
                 final TableColumn<CaseResults, String> column = new TableColumn<>(variableNameModified);
@@ -573,20 +489,14 @@ abstract class AbstractTableDataMiner<R extends CaseResults, C> extends Abstract
     }
 
     /**
-     * @return discrete selected cases
+     * @return the cases of the selected rows, once each, in the order of their selection
      */
-    @SuppressWarnings("rawtypes")
     public List<Case> getDiscreteSelectedCases() {
-        final ObservableList<TablePosition> posList = this.valuesTable.getSelectionModel().getSelectedCells();
-        final List<Case> selectedCases = new ArrayList<>();
-        for (final TablePosition p : posList) {
-            final int r = p.getRow();
-            final CaseResults caseResult = this.valuesTable.getItems().get(r);
-            if (caseResult instanceof final DiscreteCaseResults discrete) {
-                selectedCases.add(discrete.getCase());
-            }
-        }
-        return selectedCases;
+        return this.valuesTable.getSelectionModel().getSelectedItems().stream()
+                .distinct()
+                .filter(DiscreteCaseResults.class::isInstance)
+                .map(caseResult -> ((DiscreteCaseResults) caseResult).getCase())
+                .toList();
     }
 
     /**
